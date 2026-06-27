@@ -3,90 +3,64 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const zomatoUser = require("../models/user");
+const asyncHandler = require("../common/asyncHandler");
 
-const signup = async (req, res, next) => {
-  try {
-    const user = await zomatoUser.findOne({ email: req.body.email });
-    if (user) {
-      res.status(400).send({
-        error: false,
-        message: "Email id already exists.",
-      });
-    } else {
-      bcrypt.hash(req.body.password, 10, (err, hash) => {
-        if (err) {
-          req.status(400).json({ message: "password hashing not done" });
-        } else {
-          const user = new zomatoUser({
-            _id: new mongoose.Types.ObjectId(),
-            email: req.body.email,
-            password: hash,
-          });
-          console.log(user);
-          user.save();
-          res.status(201).json({ message: "new user saved" });
-        }
-      });
-    }
-  } catch (error) {
-    throw error;
+// POST /zomatouser/signup
+const signup = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
   }
-};
 
-const login = async (req, res, next) => {
-  try {
-    const user = await zomatoUser.findOne({ email: req.body.email });
-    if (!user) {
-      res.status(404).json({ message: "user not available" });
-    } else {
-      bcrypt.compare(req.body.password, user.password, (err, result) => {
-        if (err) {
-          res.status(404).json({ message: "password not encoded" });
-        }
-        if (result) {
-          const token = jwt.sign(
-            {
-              email: user.email,
-            },
-            process.env.JWT_SECRET_KEY,
-            {
-              expiresIn: "30h",
-            }
-          );
-          res.status(200).json({
-            message: "Auth succesfull",
-            token: token,
-          });
-        }
-      });
-    }
-  } catch (error) {
-    throw error;
+  const existing = await zomatoUser.findOne({ email });
+  if (existing) {
+    return res.status(409).json({ message: "Email id already exists." });
   }
-};
 
-const deleteUser = async (req, res, next) => {
-  try {
-    const deletedResponse = await zomatoUser.deleteOne({
-      _id: req.params.userId,
-    });
-    if (deletedResponse) {
-      res.status(200).json({
-        message: "user found and deleted",
-      });
-    } else {
-      res.status(200).json({
-        error: true,
-        message: "user not found",
-      });
-    }
-  } catch (error) {
-    throw error;
+  const hash = await bcrypt.hash(password, 10);
+  const user = new zomatoUser({
+    _id: new mongoose.Types.ObjectId(),
+    email,
+    password: hash,
+  });
+  await user.save();
+
+  return res.status(201).json({ message: "User created", userId: user._id });
+});
+
+// POST /zomatouser/login
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
   }
-};
 
-module.exports = { 
-  signup,
-  login,
-  deleteUser,
-};
+  const user = await zomatoUser.findOne({ email });
+  if (!user) {
+    return res.status(401).json({ message: "Authentication failed" });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ message: "Authentication failed" });
+  }
+
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET_KEY,
+    { expiresIn: "30h" }
+  );
+
+  return res.status(200).json({ message: "Auth successful", token });
+});
+
+// DELETE /zomatouser/:userId
+const deleteUser = asyncHandler(async (req, res) => {
+  const result = await zomatoUser.deleteOne({ _id: req.params.userId });
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  return res.status(200).json({ message: "User deleted" });
+});
+
+module.exports = { signup, login, deleteUser };

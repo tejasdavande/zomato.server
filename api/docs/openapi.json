@@ -1,0 +1,236 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Zomato Server API",
+    "version": "1.0.0",
+    "description": "A RESTful food-delivery backend built with Express and MongoDB. It supports JWT authentication, restaurants (each with a menu card), a standalone menu collection, and order placement that validates the restaurant before an order is created.",
+    "contact": { "name": "Tejas Davande", "url": "https://github.com/tejasdavande/zomato.server" },
+    "license": { "name": "ISC" }
+  },
+  "servers": [{ "url": "http://localhost:3000", "description": "Local development server" }],
+  "tags": [
+    { "name": "Users", "description": "Sign up, log in and manage accounts" },
+    { "name": "Restaurants", "description": "Restaurants and their menu cards" },
+    { "name": "Menu", "description": "Standalone menu items" },
+    { "name": "Orders", "description": "Place and view orders" },
+    { "name": "System", "description": "Service health" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check",
+        "responses": { "200": { "description": "Service is up", "content": { "application/json": { "example": { "status": "ok", "uptime": 12.34 } } } } }
+      }
+    },
+    "/zomatouser/signup": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Register a new user",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
+        "responses": {
+          "201": { "description": "User created" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/zomatouser/login": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Log in and receive a JWT",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credentials" } } } },
+        "responses": {
+          "200": { "description": "Authenticated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/zomatouser/{userId}": {
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete a user",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "User deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/restaurant": {
+      "get": {
+        "tags": ["Restaurants"],
+        "summary": "List all restaurants",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "A list of restaurants" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      },
+      "post": {
+        "tags": ["Restaurants"],
+        "summary": "Create a restaurant",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RestaurantInput" } } } },
+        "responses": {
+          "201": { "description": "Restaurant created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Restaurant" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "description": "Restaurant already exists" }
+        }
+      }
+    },
+    "/restaurant/{restaurant}": {
+      "get": {
+        "tags": ["Restaurants"],
+        "summary": "Get a restaurant by id",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "restaurant", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Restaurant found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Restaurant" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/restaurant/{restaurantId}": {
+      "put": {
+        "tags": ["Restaurants"],
+        "summary": "Add menu items to a restaurant's menu card",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "restaurantId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "menucard": { "type": "array", "items": { "$ref": "#/components/schemas/MenuItem" } } } } } } },
+        "responses": { "200": { "description": "Restaurant updated" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Restaurants"],
+        "summary": "Delete a restaurant",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "restaurantId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Restaurant deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/menu": {
+      "get": {
+        "tags": ["Menu"],
+        "summary": "List all menu items",
+        "responses": { "200": { "description": "A list of menu items" } }
+      },
+      "post": {
+        "tags": ["Menu"],
+        "summary": "Create a menu item",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MenuItem" } } } },
+        "responses": { "201": { "description": "Menu item added" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/menu/{menuId}": {
+      "patch": {
+        "tags": ["Menu"],
+        "summary": "Update a menu item",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "menuId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MenuItem" } } } },
+        "responses": { "200": { "description": "Menu item updated" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Menu"],
+        "summary": "Delete a menu item",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "menuId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Menu item deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/order": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "List all orders",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "A list of orders" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      },
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Place an order",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderInput" } } } },
+        "responses": {
+          "201": { "description": "Order created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "Restaurant not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Credentials": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "tejas@example.com" },
+          "password": { "type": "string", "format": "password", "minLength": 6, "example": "secret123" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Auth successful" },
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6..." }
+        }
+      },
+      "MenuItem": {
+        "type": "object",
+        "required": ["name", "price"],
+        "properties": {
+          "name": { "type": "string", "example": "Paneer Butter Masala" },
+          "price": { "type": "number", "minimum": 0, "example": 250 }
+        }
+      },
+      "RestaurantInput": {
+        "type": "object",
+        "required": ["name", "location"],
+        "properties": {
+          "name": { "type": "string", "example": "Spice Garden" },
+          "location": { "type": "string", "example": "Pune" },
+          "menucard": { "type": "array", "items": { "$ref": "#/components/schemas/MenuItem" } }
+        }
+      },
+      "Restaurant": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "location": { "type": "string" },
+          "menucard": { "type": "array", "items": { "$ref": "#/components/schemas/MenuItem" } }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": ["name", "quantity"],
+        "properties": {
+          "name": { "type": "string", "example": "Paneer Butter Masala" },
+          "quantity": { "type": "integer", "minimum": 1, "example": 2 }
+        }
+      },
+      "OrderInput": {
+        "type": "object",
+        "required": ["restaurantId", "items"],
+        "properties": {
+          "restaurantId": { "type": "string", "example": "650f1a2b3c4d5e6f7a8b9c0d" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItem" } }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "restaurantId": { "type": "string" },
+          "restaurantName": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItem" } }
+        }
+      },
+      "Error": { "type": "object", "properties": { "message": { "type": "string" } } }
+    },
+    "responses": {
+      "BadRequest": { "description": "Invalid input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Unauthorized": { "description": "Missing or invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NotFound": { "description": "Resource not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

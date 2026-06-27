@@ -1,13 +1,31 @@
 const mongoose = require("mongoose");
-const DB_username = process.env.DB_username || "node-shop" ;
-const DB_password = process.env.DB_password || "node-shop";
-const DB_name = process.env.DB_name || "node-shop";
 
-const URL = `mongodb://localhost:27017`;
+/**
+ * Build the MongoDB connection string.
+ *
+ * Configure it either with a full MONGODB_URI (recommended, works with Atlas
+ * or a local server) or with DB_USERNAME / DB_PASSWORD / DB_NAME for Atlas.
+ * Falls back to a local MongoDB so the project runs out of the box.
+ */
+const buildUri = () => {
+  if (process.env.MONGODB_URI) return process.env.MONGODB_URI;
 
-mongoose.connect(URL , {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-db = mongoose.connection;
+  const { DB_USERNAME, DB_PASSWORD, DB_NAME } = process.env;
+  if (DB_USERNAME && DB_PASSWORD) {
+    return `mongodb+srv://${DB_USERNAME}:${DB_PASSWORD}@cluster0.mongodb.net/${
+      DB_NAME || "zomato"
+    }?retryWrites=true&w=majority`;
+  }
+
+  return "mongodb://127.0.0.1:27017/zomato";
+};
+
+mongoose.set("strictQuery", true);
+
+mongoose
+  .connect(buildUri())
+  .then(() => console.log("✅  MongoDB connected successfully"))
+  .catch((err) => console.error("❌  MongoDB connection error:", err.message));
+
+const db = mongoose.connection;
 module.exports = db;

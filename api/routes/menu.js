@@ -8,13 +8,10 @@ const {
   updateMenu,
   deleteMenu,
 } = require("../controllers/menu");
-const { route } = require("./zomatouser");
 
-// routers ---------------- start----------
 router.get("/", getMenu);
 router.post("/", checkAuth, createMenu);
 router.patch("/:menuId", checkAuth, updateMenu);
 router.delete("/:menuId", checkAuth, deleteMenu);
 
-// router --------------------End -------------
 module.exports = router;

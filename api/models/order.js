@@ -1,19 +1,25 @@
 const mongoose = require("mongoose");
-const Restaurant = require("../models/restaurant");
 
-const orderschema = mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  restaurantId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Restaurant",
+const orderItemSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1, default: 1 },
   },
-  restaurantNamee: { type: String },
-  items: [
-    {
-      name: String,
-      quantity: Number,
-    },
-  ],
-});
+  { _id: false }
+);
 
-module.exports = mongoose.model("Order", orderschema);
+const orderSchema = new mongoose.Schema(
+  {
+    _id: mongoose.Schema.Types.ObjectId,
+    restaurantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: true,
+    },
+    restaurantName: { type: String },
+    items: { type: [orderItemSchema], required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Order", orderSchema);

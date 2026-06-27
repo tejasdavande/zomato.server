@@ -1,14 +1,19 @@
 const mongoose = require("mongoose");
 
-const userSchema = mongoose.Schema({
-  _id:  mongoose.Schema.Types.ObjectId,
-  email: {
-    type: String,
-    require: true,
-    unique: true,
-    match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
+const userSchema = new mongoose.Schema(
+  {
+    _id: mongoose.Schema.Types.ObjectId,
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/, "Please provide a valid email"],
+    },
+    password: { type: String, required: true, minlength: 6 },
   },
-  password: { type: String, require: true },
-});
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("zomatoUser", userSchema);
